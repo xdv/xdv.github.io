@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XDV Operating System</title>
+  <meta name="description" content="XDV Operating System: boot chain, kernel architecture, runtime model, and xdvfs image profile.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <div class="bg-noise" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="brand">XDV OS</div>
+    <nav class="menu">
+      <a href="#boot-chain">Boot Chain</a>
+      <a href="#subsystems">Subsystems</a>
+      <a href="#image-layout">Image Layout</a>
+      <a href="#build">Build</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero reveal">
+      <p class="kicker">Cross-Domain Virtualizer</p>
+      <h1>XDV Operating System</h1>
+      <p class="lede">
+        A Dust-native operating system stack spanning <strong>xdv-boot</strong>,
+        <strong>xdv-kernel</strong>, <strong>xdv-runtime</strong>,
+        <strong>xdv-shell</strong>, and <strong>xdv-xdvfs</strong>.
+      </p>
+      <div class="hero-metrics">
+        <article>
+          <h2>64MB</h2>
+          <p>Target image profile</p>
+        </article>
+        <article>
+          <h2>2 Binaries</h2>
+          <p><code>boot.bin</code> and <code>kernel.bin</code></p>
+        </article>
+        <article>
+          <h2>K Domain</h2>
+          <p>Operational now, Q/Phi hardware-gated</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="boot-chain" class="panel reveal">
+      <h2>Boot Contract Chain</h2>
+      <p class="intro">
+        Current boot policy is strict: stage-0 transports to <code>boot.bin</code> only;
+        <code>boot.bin</code> then resolves and transfers control to
+        <code>/console/kernel.bin</code> from xdvfs.
+      </p>
+      <ol class="chain">
+        <li>
+          <h3>1. Stage-0</h3>
+          <p><code>xdv-os/src/boot_sector.asm</code> enters from MBR and loads <code>boot.bin</code>.</p>
+        </li>
+        <li>
+          <h3>2. xdv-boot Runtime</h3>
+          <p><code>xdv-boot</code> executes splash flow, firmware path recognition (MBR/UEFI), and xdvfs mount policy.</p>
+        </li>
+        <li>
+          <h3>3. Kernel Discovery</h3>
+          <p>Loader resolves <code>xdvfs:/console/kernel.bin</code> and loads the kernel image.</p>
+        </li>
+        <li>
+          <h3>4. Kernel Handoff</h3>
+          <p><code>XdvKernel::kernel_start()</code> initializes runtime and enters kernel main loop.</p>
+        </li>
+        <li>
+          <h3>5. Runtime + Shell</h3>
+          <p><code>xdv-runtime</code> starts userspace; <code>xdv-shell</code> provides the interactive <code>#:</code> prompt.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section id="subsystems" class="panel reveal">
+      <h2>Subsystems</h2>
+      <div class="grid">
+        <article class="card">
+          <h3>xdv-os</h3>
+          <p>Integration workspace that composes the boot contract and emits partitioned 64MB images.</p>
+          <ul>
+            <li><code>xdv-os-mbr-64m.img</code> (BIOS/MBR)</li>
+            <li><code>xdv-os-uefi-64m.img</code> (UEFI/GPT)</li>
+            <li><code>xdv-os.img</code> alias to MBR image</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>xdv-boot (v0.3.0)</h3>
+          <p>Boot loader profile with BIOS and UEFI path models and xdvfs-based kernel load policy.</p>
+          <ul>
+            <li><code>boot_loader_profile.ds</code></li>
+            <li><code>boot_mbr.ds</code> and <code>boot_uefi.ds</code></li>
+            <li><code>boot_xdvfs_mount.ds</code>, <code>boot_kernel_load.ds</code></li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>xdv-kernel (v0.2)</h3>
+          <p>Sectorized kernel with 13 subsystems including memory, CPU, DAL, CDS, security, and trace layers.</p>
+          <ul>
+            <li>K-domain runtime online on x64 Intel/AMD</li>
+            <li>Q/Phi calls hardware-gated with code <code>100</code></li>
+            <li>Bare-metal runtime shell profile for VM validation</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>xdv-runtime</h3>
+          <p>Userspace runtime services: process, memory, I/O, scheduler, filesystem, and shell bootstrap bridge.</p>
+          <ul>
+            <li><code>runtime_bridge.ds</code></li>
+            <li><code>runtime_memory.ds</code>, <code>runtime_process.ds</code></li>
+            <li><code>runtime_console.ds</code>, <code>runtime_fs.ds</code></li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>xdv-shell (v0.3.0)</h3>
+          <p>Interactive command shell with lexer/parser/executor pipeline and builtin command set.</p>
+          <ul>
+            <li>Prompt: <code>#:</code></li>
+            <li>Builtins: <code>cd ls cat mkdir rm echo ps help exit</code></li>
+            <li>Integrated with runtime command dispatch</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>xdv-xdvfs (v0.3.0)</h3>
+          <p>Native filesystem stack and block-device contracts for ATA/AHCI, NVMe, USB MSC, and VirtIO.</p>
+          <ul>
+            <li>Partition probing and superblock validation</li>
+            <li>Mount/remount/sync/fsck and format pipeline</li>
+            <li>Companion tooling in <code>xdv-xdvfs-utils</code></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="image-layout" class="panel reveal">
+      <h2>64MB Image Profile</h2>
+      <p class="intro">XDV image generation uses a partition-aware xdvfs layout for deterministic boot and preload behavior.</p>
+      <div class="layout">
+        <div>
+          <h3>Boot Partition Metadata</h3>
+          <ul>
+            <li>Partition start LBA: <code>2048</code></li>
+            <li>Superblock relative LBA: <code>8</code></li>
+            <li>Kernel slot relative LBA: <code>32</code></li>
+            <li>Preload payload relative LBA: <code>128</code></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Preloaded Packages</h3>
+          <ul>
+            <li><code>xdv-os</code></li>
+            <li><code>xdv-core</code> / <code>xdv-runtime-utils</code></li>
+            <li><code>xdv-edx</code></li>
+            <li><code>xdv-shell</code></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="build" class="panel reveal">
+      <h2>Build and Run</h2>
+      <div class="commands">
+        <article>
+          <h3>Windows</h3>
+          <pre><code>cd xdv-os\src
+build.bat</code></pre>
+        </article>
+        <article>
+          <h3>Linux / macOS</h3>
+          <pre><code>cd xdv-os/src
+./build.sh</code></pre>
+        </article>
+        <article>
+          <h3>Cleanup</h3>
+          <pre><code>powershell -NoProfile -ExecutionPolicy Bypass -File xdv-os/scripts/clean_xdv_os.ps1 -Apply</code></pre>
+        </article>
+      </div>
+      <p class="note">
+        VirtualBox workflow: attach <code>xdv-os-mbr-64m.img</code> (or <code>xdv-os.img</code>) for BIOS,
+        or enable EFI and attach <code>xdv-os-uefi-64m.img</code>.
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>XDV OS | Dust Programming Language | <span id="year"></span></p>
+  </footer>
+
+  <script src="assets/site.js"></script>
+</body>
+</html>
